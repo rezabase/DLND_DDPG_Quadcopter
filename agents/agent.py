@@ -22,7 +22,9 @@ Here is an outline of the agent class:
 
 class DDPG():
     """Reinforcement Learning agent that learns using DDPG."""
-    def __init__(self, task):
+    #name: is a name to use to save the netural Network models
+    #load: load data from existing models or cretae an entirly new model
+    def __init__(self, task, name, loadfile=False):
         self.task = task
         self.state_size = task.state_size
         self.action_size = task.action_size
@@ -37,14 +39,22 @@ class DDPG():
         self.critic_local = Critic(self.state_size, self.action_size)
         self.critic_target = Critic(self.state_size, self.action_size)
 
+        self.name = name
+        if loadfile:
+            self.actor_local.model.load_weights("./weights/" + name + "_actor.h5")
+            self.critic_local.model.load_weights("./weights/" + name + "_critic.h5")
+            
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
         self.actor_target.model.set_weights(self.actor_local.model.get_weights())
 
+        
+            
         # Noise process
         self.exploration_mu = 0
-        self.exploration_theta = 0.15
-        self.exploration_sigma = 0.3
+        self.exploration_theta = 0.15 #0.3 #original 0.15
+        self.exploration_sigma = 0.3 #0.3 #original 0.3
+        
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         # Replay memory
@@ -56,12 +66,21 @@ class DDPG():
         self.gamma = 0.99  # discount factor
         self.tau = 0.001  # for soft update of target parameters
 
+        
+        
+        
+        
+        
     def reset_episode(self):
         self.noise.reset()
         state = self.task.reset()
         self.last_state = state
         return state
 
+    
+    
+    
+    
     def step(self, action, reward, next_state, done):
          # Save experience / reward
         self.memory.add(self.last_state, action, reward, next_state, done)
@@ -86,6 +105,9 @@ class DDPG():
         states = np.vstack([e.state for e in experiences if e is not None])
         actions = np.array([e.action for e in experiences if e is not None]).astype(np.float32).reshape(-1, self.action_size)
         rewards = np.array([e.reward for e in experiences if e is not None]).astype(np.float32).reshape(-1, 1)
+        
+        #rewards = np.interp(rewards, (rewards.min(), rewards.max()), (-1, +1)) #TESTING to scale rewards to a small number.
+        
         dones = np.array([e.done for e in experiences if e is not None]).astype(np.uint8).reshape(-1, 1)
         next_states = np.vstack([e.next_state for e in experiences if e is not None])
 
@@ -106,8 +128,12 @@ class DDPG():
         self.soft_update(self.critic_local.model, self.critic_target.model)
         self.soft_update(self.actor_local.model, self.actor_target.model)
 
+       
         
         
+    def save_weights(self):
+        self.actor_local.model.save_weights("./weights/" + self.name + "_actor.h5")
+        self.critic_local.model.save_weights("./weights/" + self.name + "_critic.h5")
         
         
 
@@ -123,3 +149,8 @@ class DDPG():
 
         new_weights = self.tau * local_weights + (1 - self.tau) * target_weights
         target_model.set_weights(new_weights)
+        
+        
+        
+        
+        

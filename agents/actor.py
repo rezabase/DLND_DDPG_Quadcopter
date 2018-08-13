@@ -24,6 +24,11 @@ from keras import backend as K
 
 
 
+import test_hidden_layers
+
+
+
+
 class Actor:
     """Actor (Policy) Model."""
 
@@ -42,22 +47,29 @@ class Actor:
         self.action_low = action_low
         self.action_high = action_high
         self.action_range = self.action_high - self.action_low
-
+        
         self.build_model()
 
+        
+        
+                
     def build_model(self):
         """Build an actor (policy) network that maps states -> actions."""
         # Define input layer (states)
         states = layers.Input(shape=(self.state_size,), name='states')
+        
 
-        # Add hidden layers
-        net = layers.Dense(units=400,kernel_regularizer=layers.regularizers.l2(1e-6))(states)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation("relu")(net)
-        net = layers.Dense(units=300,kernel_regularizer=layers.regularizers.l2(1e-6))(net)
-        net = layers.BatchNormalization()(net)
-        net = layers.Activation("relu")(net)
-
+        
+        
+        #Used following Neural Betwork for Test6
+        #net = test_hidden_layers.small(states)
+        
+        #Used following Neural Network for Test10
+        net = test_hidden_layers.medium(states)
+        
+        #Used following Neural Network for Tests 6 that I have saved
+        #net = test_hidden_layers.large(states)
+        
         
         #Note that the raw actions produced by the output layer are in a [0.0, 1.0] range (using a sigmoid activation function). 
         #So, we add another layer that scales each output to the desired range for each action dimension. 
@@ -66,7 +78,9 @@ class Actor:
         
         # Add final output layer with sigmoid activation
         raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
-            name='raw_actions',kernel_initializer=layers.initializers.RandomUniform(minval=-0.003, maxval=0.003))(net)
+            name='raw_actions',kernel_initializer=layers.initializers.RandomUniform(minval=-0.01, maxval=0.01))(net)
+        #raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
+        #    name='raw_actions')(net)
 
         # Scale [0, 1] output for each action dimension to proper range
         actions = layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
@@ -83,9 +97,11 @@ class Actor:
         #These gradients will need to be computed using the critic model, and fed in while training. 
         #Hence it is specified as part of the "inputs" used in the training function:
         # Define optimizer and training function
-        optimizer = optimizers.Adam(lr=.0001)
+        optimizer = optimizers.Adam(lr=.00001)
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
         self.train_fn = K.function(
             inputs=[self.model.input, action_gradients, K.learning_phase()],
             outputs=[],
             updates=updates_op)
+        
+       
